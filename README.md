@@ -27,4 +27,5 @@ sbt sbtVersion // Checks the sbt version
 sbt run // Compiles and runs the main class
 sbt test // Compiles and runs tests
 sbt console // Starts the Scala REPL with project dependencies
+sbt "testOnly directory.testClassName" // # Runs a specific test class, e.g., recfun.PascalSuite
 ```
