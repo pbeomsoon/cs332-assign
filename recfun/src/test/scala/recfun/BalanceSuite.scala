@@ -24,4 +24,25 @@ class BalanceSuite extends FunSuite {
   test("balance: counting is not enough") {
     assert(!balance("())(".toList))
   }
+
+  // 테스트 추가
+  test("balance: empty string") {
+    assert(balance("".toList))
+  }
+
+  test("balance: only opening parentheses") {
+    assert(!balance("((((((".toList))
+  }
+
+  test("balance: only closing parentheses") {
+    assert(!balance("))))))".toList))
+  }
+
+  test("balance: nested parentheses") {
+    assert(balance("((())())".toList))
+  }
+
+  test("balance: complicated parentheses") {
+    assert(balance("(()) ((x)(y)(()(())))z(())()".toList))
+  }
 }
