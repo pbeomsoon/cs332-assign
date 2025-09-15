@@ -77,6 +77,14 @@ class FunSetSuite extends FunSuite {
     val s1 = singletonSet(1)
     val s2 = singletonSet(2)
     val s3 = singletonSet(3)
+
+    // 합집합
+    val s12 = union(s1, s2)
+    val s23 = union(s2, s3)
+    val s123 = union(s12, s3)
+
+    val s_even = (x: Int) => x % 2 == 0
+    val s_positive = (x: Int) => x > 0
   }
 
   /**
@@ -86,8 +94,7 @@ class FunSetSuite extends FunSuite {
    * Once you finish your implementation of "singletonSet", exchange the
    * function "ignore" by "test".
    */
-  ignore("singletonSet(1) contains 1") {
-    
+  test("singletonSet(1) contains 1") {
     /**
      * We create a new instance of the "TestSets" trait, this gives us access
      * to the values "s1" to "s3". 
@@ -101,12 +108,69 @@ class FunSetSuite extends FunSuite {
     }
   }
 
-  ignore("union contains all elements") {
+  test("union contains all elements") {
     new TestSets {
       val s = union(s1, s2)
       assert(contains(s, 1), "Union 1")
       assert(contains(s, 2), "Union 2")
       assert(!contains(s, 3), "Union 3")
+    }
+  }
+
+  test("intersect contains only common elements") {
+    new TestSets {
+      val s = intersect(s12, s23)
+      assert(!contains(s, 1), "Intersect 1")
+      assert(contains(s, 2), "Intersect 2")
+      assert(!contains(s, 3), "Intersect 3")
+    }
+  }
+
+  test("diff contains elements only from the first set") {
+    new TestSets {
+      val s = diff(s12, s23)
+      assert(contains(s, 1), "Diff 1")
+      assert(!contains(s, 2), "Diff 2")
+      assert(!contains(s, 3), "Diff 3")
+    }
+  }
+
+  test("filter selects elements based on a predicate") {
+    new TestSets {
+      val s = filter(s123, x => x > 1)
+      assert(!contains(s, 1), "Filter 1")
+      assert(contains(s, 2), "Filter 2")
+      assert(contains(s, 3), "Filter 3")
+    }
+  }
+
+  test("forall checks if all elements satisfy a predicate") {
+    new TestSets {
+      // s123 = {1, 2, 3}
+      assert(forall(s123, x => x > 0), "Forall positive check")
+      assert(!forall(s123, x => x > 1), "Forall greater than 1 check")
+      assert(forall(s_positive, x => x > -1), "Forall on positives set")
+    }
+  }
+
+  test("exists checks if at least one element satisfies a predicate") {
+    new TestSets {
+      // s123 = {1, 2, 3}
+      assert(exists(s123, x => x == 2), "Exists 2")
+      assert(!exists(s123, x => x == 5), "Exists 5")
+      assert(exists(s_even, x => x == 100), "Exists on even set")
+    }
+  }
+
+  test("map transforms a set by applying a function") {
+    new TestSets {
+      // s123 = {1, 2, 3}
+      val mappedSet = map(s123, x => x * x) // {1*1, 2*2, 3*3} = {1, 4, 9}
+      assert(contains(mappedSet, 1), "Map 1")
+      assert(contains(mappedSet, 4), "Map 4")
+      assert(contains(mappedSet, 9), "Map 9")
+      assert(!contains(mappedSet, 2), "Map 2")
+      assert(!contains(mappedSet, 3), "Map 3")
     }
   }
 }
