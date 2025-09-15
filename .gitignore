@@ -18,3 +18,5 @@ out/
 # 기타
 *.log
 *.tmp
+.vscode/
+.metals/
