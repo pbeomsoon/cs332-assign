@@ -42,7 +42,14 @@ abstract class TweetSet {
    * Question: Can we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-  def filter(p: Tweet => Boolean): TweetSet = ???
+
+  /*
+  추상 클래스 TweetSet -> 이를 상속받는 자식 클래스 Empty/NonEmpty
+  구현해야할 method를 추상 or 자식 어디에 정의해야 효율적인지 생각해야함
+  */
+
+  // 조건 p에 맞는 TweetSet을 반환
+  def filter(p: Tweet => Boolean): TweetSet = filterAcc(p, new Empty) // 조건 p와 비어있는 acc 전달
 
   /**
    * This is a helper method for `filter` that propagetes the accumulated tweets.
@@ -55,7 +62,13 @@ abstract class TweetSet {
    * Question: Should we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-   def union(that: TweetSet): TweetSet = ???
+  // this와 that의 합집합인 TweetSet을 반환
+  // Empty와 NonEmpty에 foreach와 incl이 각각 구현되어있어서 다형성이 보장되므로 직접 method 구현
+  def union(that: TweetSet): TweetSet = {
+     var resultSet = that
+     this.foreach(tweet => resultSet = resultSet.incl(tweet)) // that에 this의 tweet을 하나씩 추가하는 형태
+     resultSet
+   }
 
   /**
    * Returns the tweet from this set which has the greatest retweet count.
@@ -66,7 +79,9 @@ abstract class TweetSet {
    * Question: Should we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-  def mostRetweeted: Tweet = ???
+  // TweetSet에서 Retweet이 가장 많은 Tweet을 반환
+  // Empty는 예외처리, NonEmpty는 실제로 반환. 각 로직이 다르기에 자식 클래스에 분리하여 로직 구현
+  def mostRetweeted: Tweet
 
   /**
    * Returns a list containing all tweets of this set, sorted by retweet count
@@ -77,9 +92,9 @@ abstract class TweetSet {
    * Question: Should we implment this method here, or should it remain abstract
    * and be implemented in the subclasses?
    */
-  def descendingByRetweet: TweetList = ???
-
-
+  // TweetSet에서 Retweet을 기준으로 내림차순 정렬된 TweetList를 반환
+  // Empty와 NonEmpty 각 로직이 다르기에 자식 클래스에 분리하여 로직 구현
+  def descendingByRetweet: TweetList
   /**
    * The following methods are already implemented
    */
@@ -110,9 +125,12 @@ abstract class TweetSet {
 
 class Empty extends TweetSet {
 
-  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = ???
+  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = acc
 
+  // 예외처리
+  def mostRetweeted: Tweet = throw new java.util.NoSuchElementException("Calling `mostRetweeted` on an empty set")
 
+  def descendingByRetweet: TweetList = Nil
   /**
    * The following methods are already implemented
    */
@@ -128,9 +146,23 @@ class Empty extends TweetSet {
 
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
-  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = ???
+  def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = {
+    val newAcc = if (p(elem)) acc.incl(elem) else acc // 조건에 맞는 tweet elem을 acc에 추가
+    right.filterAcc(p, left.filterAcc(p, newAcc)) // 왼쪽 파트 먼저 newAcc를 업데이트 -> 이후 오른쪽 파트 진행
+  }
 
+  def mostRetweeted: Tweet = {
+    var mostTweet = this.elem
+    this.foreach(tweet => { // 순회하며 Tweet 클래스의 retweets 값이 가장 큰 값을 찾기
+      if(tweet.retweets > mostTweet.retweets) mostTweet = tweet
+    })
+    mostTweet
+  }
 
+  def descendingByRetweet: TweetList = {
+    val mostTweet = this.mostRetweeted // 현재 가장 retweets이 큰 tweet을 찾음
+    new Cons(mostTweet, this.remove(mostTweet).descendingByRetweet) // mostTweet을 머리로, 나머지는 재귀적으로 다시 정렬
+  }
   /**
    * The following methods are already implemented
    */
@@ -184,14 +216,17 @@ object GoogleVsApple {
   val google = List("android", "Android", "galaxy", "Galaxy", "nexus", "Nexus")
   val apple = List("ios", "iOS", "iphone", "iPhone", "ipad", "iPad")
 
-  lazy val googleTweets: TweetSet = ???
-  lazy val appleTweets: TweetSet = ???
-
+  // google 키워드를 포함하는지 필터
+  lazy val googleTweets: TweetSet =
+    TweetReader.allTweets.filter(tweet => google.exists(keyword => tweet.text.contains(keyword)))
+  // apple 키워드를 포함하는지 필터
+  lazy val appleTweets: TweetSet =
+    TweetReader.allTweets.filter(tweet => apple.exists(keyword => tweet.text.contains(keyword)))
   /**
    * A list of all tweets mentioning a keyword from either apple or google,
    * sorted by the number of retweets.
    */
-  lazy val trending: TweetList = ???
+  lazy val trending: TweetList = googleTweets.union(appleTweets).descendingByRetweet
 }
 
 object Main extends App {

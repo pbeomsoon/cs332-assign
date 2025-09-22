@@ -16,7 +16,17 @@ class TweetSetSuite extends FunSuite {
     val set4c = set3.incl(c)
     val set4d = set3.incl(d)
     val set5 = set4c.incl(d)
+
+    // descending 테스트를 위한 복합 데이터
+    val e = new Tweet("e", "e body", 100)
+    val f = new Tweet("f", "f body", 0)
+    val complexSet = set5.incl(e).incl(f) // {a(20), b(20), c(7), d(9), e(100), f(0)}
   }
+
+  // TweetList를 Scala의 List로 변환하는 헬퍼 함수
+  def tweetListToList(tl: TweetList): List[Tweet] =
+    if (tl.isEmpty) List()
+    else tl.head :: tweetListToList(tl.tail)
 
   def asSet(tweets: TweetSet): Set[Tweet] = {
     var res = Set[Tweet]()
@@ -41,6 +51,12 @@ class TweetSetSuite extends FunSuite {
   test("filter: 20 on set5") {
     new TestSets {
       assert(size(set5.filter(tw => tw.retweets == 20)) === 2)
+
+      // 유저가 'c'이면서 리트윗이 7개인 트윗 필터링
+      assert(size(set5.filter(tw => tw.user == "c" && tw.retweets == 7)) === 1)
+
+      // 결과가 아무것도 없는 필터링
+      assert(size(set5.filter(tw => tw.retweets > 100)) === 0)
     }
   }
 
@@ -59,6 +75,12 @@ class TweetSetSuite extends FunSuite {
   test("union: with empty set (2)") {
     new TestSets {
       assert(size(set1.union(set5)) === 4)
+
+      // 여러 원소가 겹치는 두 집합의 union
+      assert(size(set5.union(set4c)) === 4)
+
+      // 자기 자신과의 union
+      assert(size(set3.union(set3)) === 2)
     }
   }
 
@@ -67,6 +89,17 @@ class TweetSetSuite extends FunSuite {
       val trends = set5.descendingByRetweet
       assert(!trends.isEmpty)
       assert(trends.head.user == "a" || trends.head.user == "b")
+
+      // 리트윗 수가 다양한 집합의 정렬 순서 검증
+      val complexTrends = tweetListToList(complexSet.descendingByRetweet)
+      val retweets = complexTrends.map(tw => tw.retweets)
+      assert(retweets === List(100, 20, 20, 9, 7, 0))
+
+      // 원소가 하나인 집합의 정렬
+      val singleTrend = set2.descendingByRetweet
+      assert(!singleTrend.isEmpty)
+      assert(singleTrend.head.user === "a")
+      assert(singleTrend.tail.isEmpty)
     }
   }
 }
