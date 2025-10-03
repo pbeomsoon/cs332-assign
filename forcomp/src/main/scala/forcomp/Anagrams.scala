@@ -33,10 +33,16 @@ object Anagrams {
    *  Note: the uppercase and lowercase version of the character are treated as the
    *  same character, and are represented as a lowercase character in the occurrence list.
    */
-  def wordOccurrences(w: Word): Occurrences = ???
+  def wordOccurrences(w: Word): Occurrences = {
+    // word 전처리: 대소문자, 문장부호 무시
+    w.toLowerCase.replace(".", "").trim
+      .groupBy(identity).mapValues(_.length).toList.sorted
+  }
 
   /** Converts a sentence into its character occurrence list. */
-  def sentenceOccurrences(s: Sentence): Occurrences = ???
+  def sentenceOccurrences(s: Sentence): Occurrences = {
+    wordOccurrences(s.mkString) // 하나의 긴 단어로 합친 뒤에, wordOccurrences 재사용
+  }
 
   /** The `dictionaryByOccurrences` is a `Map` from different occurrences to a sequence of all
    *  the words that have that occurrence count.
@@ -53,10 +59,15 @@ object Anagrams {
    *    List(('a', 1), ('e', 1), ('t', 1)) -> Seq("ate", "eat", "tea")
    *
    */
-  lazy val dictionaryByOccurrences: Map[Occurrences, List[Word]] = ???
+  lazy val dictionaryByOccurrences: Map[Occurrences, List[Word]] = {
+    dictionary.groupBy(w => wordOccurrences(w)) // 사전 단어들의 Occurrences를 기준으로 묶음
+  }
 
   /** Returns all the anagrams of a given word. */
-  def wordAnagrams(word: Word): List[Word] = ???
+  def wordAnagrams(word: Word): List[Word] = {
+    // 주어진 단어의 Occurrences를 가지고, dictionaryByOccurrences에서 일치하는 값 조회 -> 애너그램 단어들 찾기 가능
+    dictionaryByOccurrences.getOrElse(wordOccurrences(word), Nil)
+  }
 
   /** Returns the list of all subsets of the occurrence list.
    *  This includes the occurrence itself, i.e. `List(('k', 1), ('o', 1))`
@@ -80,7 +91,16 @@ object Anagrams {
    *  Note that the order of the occurrence list subsets does not matter -- the subsets
    *  in the example above could have been displayed in some other order.
    */
-  def combinations(occurrences: Occurrences): List[Occurrences] = ???
+  def combinations(occurrences: Occurrences): List[Occurrences] = occurrences match {
+    case Nil => List(Nil)
+    case (char, freq) :: tail =>
+      val tailCombs = combinations(tail)
+      val headCombs = for {
+        comb <- tailCombs
+        freqIter <- 1 to freq
+      } yield (char, freqIter) :: comb // tail에서 만들어진 조합들과 head만으로 가능한 조합들을 결합
+    headCombs ++ tailCombs // head+tail 조합과 tail 조합을 이어붙임
+  }
 
   /** Subtracts occurrence list `y` from occurrence list `x`.
    * 
@@ -92,7 +112,14 @@ object Anagrams {
    *  Note: the resulting value is an occurrence - meaning it is sorted
    *  and has no zero-entries.
    */
-  def subtract(x: Occurrences, y: Occurrences): Occurrences = ???
+  def subtract(x: Occurrences, y: Occurrences): Occurrences = {
+    val yMap = y.toMap
+    x.map {
+      case (xChar, xFreq) =>
+        val yFreq = yMap.getOrElse(xChar, 0)
+        (xChar, xFreq - yFreq)
+    }.filter(_._2 > 0).sorted
+  }
 
   /** Returns a list of all anagram sentences of the given sentence.
    *  
@@ -134,6 +161,30 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = ???
-
+  def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
+    def restAnagrams(occurrences: Occurrences): List[Sentence] = {
+      if (occurrences.isEmpty) List(Nil)
+      else {
+        for {
+          comb <- combinations(occurrences)
+          if (dictionaryByOccurrences.contains(comb))
+          word <- dictionaryByOccurrences(comb)
+          rest <- restAnagrams(subtract(occurrences, comb))
+        } yield word :: rest
+      }
+    }
+    restAnagrams(sentenceOccurrences(sentence))
+  }
 }
+
+/* 위에서 구현한 sentenceAnagrams은 애너그램을 찾기위해 재귀적으로 호출하면서
+*  동일한 comb에 대해 그 값을 기억하는 것이 아니라, 중복하여 계산하고 있기에 비효율적임
+*  예를 들어, 'meme' 단어에 대해 Occurrences ((e, 2), (m, 2))에서 부분 조합 ((e, 1), (m, 1))으로
+* 'me'를 찾고, 이를 subtract해도 다시 ((e, 1), (m, 1))에 대해 중복 계산
+*  이를 개선하기위해 문서에서는 memoization을 활용하여 sentenceAnagramsMemo 함수를 구현해보라고 함 (optional)
+*  한번 계산한 조합에 대해서 저장해두고, 같은 조합을 계산해야할 때 바로 활용할 수 있도록 구현하는 것
+* */
+
+//def sentenceAnagramsMemo(sentence: Sentence): List[Sentence] = {
+//  var memo = ???
+//}
